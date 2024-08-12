@@ -2,7 +2,7 @@
 
 Dual-Player Online Quiz Battle DEMO
 
-##　后端：pk-community
+## 后端：pk-community
 
 - JDK 8
 - WebSocket
@@ -10,3 +10,4 @@ Dual-Player Online Quiz Battle DEMO
 ## 前端：pk-uniapp
 
 - uniapp
+

@@ -1,0 +1,92 @@
+{
+  "easycom": {
+    "^u-(.*)": "uview-ui/components/u-$1/u-$1.vue"
+  },
+  "pages": [
+    //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+    {
+      "path": "pages/user/user",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录注册",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/user/edit",
+      "style": {
+        "navigationBarTitleText": "个人信息维护",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/error/error",
+      "style": {
+        "navigationBarTitleText": "404",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/test/test",
+      "style": {
+        "navigationBarTitleText": "答题",
+        "backgroundColor": "#fff",
+        "navigationBarTextStyle": "black",
+        "enablePullDownRefresh": true,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/test/pk",
+      "style": {
+        "navigationBarTitleText": "对战",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/test/pkMode",
+      "style": {
+        "navigationBarTitleText": "匹配模式",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/test/random",
+      "style": {
+        "navigationBarTitleText": "随机答题",
+        "enablePullDownRefresh": false
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "pk",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#FFFFFF"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#2c2c2c",
+    "borderStyle": "white",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/user/user",
+        "iconPath": "static/tabbar/my-1.png",
+        "selectedIconPath": "static/tabbar/my.png",
+        "text": "我的"
+      },
+      {
+        "pagePath": "pages/test/test",
+        "iconPath": "static/tabbar/my-1.png",
+        "selectedIconPath": "static/tabbar/my.png",
+        "text": "答题"
+      }
+    ]
+  }
+}

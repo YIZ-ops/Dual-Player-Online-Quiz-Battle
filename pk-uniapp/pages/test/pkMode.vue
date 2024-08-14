@@ -90,6 +90,7 @@ export default {
           JSON.stringify({
             type: 'pk',
             username: this.username,
+            avatar: this.avatar,
           }),
       )
       // 匹配成功

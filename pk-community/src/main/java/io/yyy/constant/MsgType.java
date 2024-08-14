@@ -1,9 +1,7 @@
 package io.yyy.constant;
 
 public interface MsgType {
-    /**
-     * 心跳
-     */
+    // 心跳
     String PING = "ping";
     String PONG = "pong";
     // 注册成功
@@ -20,10 +18,7 @@ public interface MsgType {
     String PK = "pk";
     // 匹配成功
     String MATCHED = "matched";
-    // 匹配超时
-    String MATCH_TIMEOUT = "match_timeout";
     // PK离开
     String LEAVE = "leave";
     String SUCCESS = "100";
-    String ERROR = "200";
 }

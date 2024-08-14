@@ -1,5 +1,5 @@
 package io.yyy.constant;
 
-public interface RobotName {
+public interface Room {
     int ROOM_NUM_CLEAR = 10;
 }

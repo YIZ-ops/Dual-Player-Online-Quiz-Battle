@@ -16,15 +16,13 @@ public class MyWsHandler extends AbstractWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        log.debug("[{}]已连接", session.getId());
-//        TextMessage message = new TextMessage(new WebMsg().setData("hello client").toJsonString());
-//        session.sendMessage(message);
+        log.debug("[{}] connected", session.getId());
         super.afterConnectionEstablished(session);
     }
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        log.debug("收到消息{}", message.getPayload());
+        log.debug("Received message: {}", message.getPayload());
         msgHandler.handle(session, message);
         super.handleMessage(session, message);
     }
@@ -36,14 +34,13 @@ public class MyWsHandler extends AbstractWebSocketHandler {
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        exception.printStackTrace();
-        System.out.println("发生错误");
+        log.error("Error occurred", exception);
         super.handleTransportError(session, exception);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        log.debug("[{}]已断开", session.getId());
+        log.debug("[{}] disconnected", session.getId());
         WebSessionManager.removeByData(session);
         super.afterConnectionClosed(session, status);
     }

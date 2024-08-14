@@ -9,185 +9,138 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 @Slf4j
 public class WebSessionManager {
 
-    public static ConcurrentHashMap<String, WebSocketSession> SESSION_POOL = new ConcurrentHashMap<>(64);
-    public static CopyOnWriteArrayList<PkRoom> rooms = new CopyOnWriteArrayList<>();
+    public static final ConcurrentHashMap<String, WebSocketSession> SESSION_POOL = new ConcurrentHashMap<>(64);
+    public static final Map<String, PkRoom> roomMap = new ConcurrentHashMap<>();
 
     /**
-     * 用户名和session绑定
-     *
-     * @param key
-     * @param session
+     * 用户名和 session 绑定
      */
     public static void add(String key, WebSocketSession session) {
         SESSION_POOL.put(key, session);
-        log.info("[{}]用户和Session[{}]绑定", key, session.getId());
-        log.info("[{}]用户进入PK等待", key);
+        log.info("User [{}] bound to Session [{}]", key, session.getId());
+        log.info("User [{}] entered PK waiting", key);
     }
 
     /**
-     * 用户名和session解绑
-     *
-     * @param key
-     * @return
+     * 用户名和 session 解绑
      */
     public static WebSocketSession remove(String key) {
-        log.info("[{}]用户离开房间");
+        log.info("User [{}] left the room", key);
         WebSocketSession session = SESSION_POOL.remove(key);
-        log.info("[{}]用户和Session[{}]取消绑定", key, session.getId());
+        if (session != null) {
+            log.info("User [{}] unbound from Session [{}]", key, session.getId());
+        }
         return session;
     }
 
     /**
      * 删除并同步关闭连接
-     *
-     * @param key
      */
     public static void removeAndClose(String key) {
         WebSocketSession session = remove(key);
         if (session != null) {
             try {
-                // 关闭连接
                 session.close();
-                log.info("Session[{}]关闭", key, session.getId());
+                log.info("Session [{}] closed", session.getId());
             } catch (IOException e) {
-                // todo: 关闭出现异常处理
-                e.printStackTrace();
+                log.error("Error closing session [{}]: {}", session.getId(), e.getMessage());
             }
         }
     }
 
     /**
-     * 通过session把绑定的用户给删除以及踢出房间
-     *
-     * @param session
+     * 通过 session 把绑定的用户给删除以及踢出房间
      */
     public static void removeByData(WebSocketSession session) {
-        Iterator<Map.Entry<String, WebSocketSession>> iterator = SESSION_POOL.entrySet().iterator();
         String username = null;
-        while (iterator.hasNext()) {
-            Map.Entry<String, WebSocketSession> next = iterator.next();
-            if (next.getValue() == session) {
-                username = next.getKey();
-                iterator.remove();
+        for (Map.Entry<String, WebSocketSession> entry : SESSION_POOL.entrySet()) {
+            if (entry.getValue() == session) {
+                username = entry.getKey();
+                SESSION_POOL.remove(username);
+                break;
             }
         }
-        // 找到username的房间，把他踢出去
         if (!StringUtils.isNullOrEmpty(username)) {
-            for (PkRoom room : rooms) {
-                if (username.equals(room.getSessionAUsername())) {
-                    room.setSessionAUsername(null);
-                    room.setUserNum(room.getUserNum() - 1);
-                    room.setStatus(ClientStatus.WAIT);
-                } else if (username.equals(room.getSessionBUsername())) {
-                    room.setSessionBUsername(null);
-                    room.setUserNum(room.getUserNum() - 1);
-                    room.setStatus(ClientStatus.WAIT);
-                }
-            }
+            removeUserFromRoom(username);
         }
     }
 
     /**
      * 通过昵称获得 session
-     *
-     * @param key
-     * @return
      */
     public static WebSocketSession get(String key) {
-        // 获得 session
-        if (StringUtils.isNullOrEmpty(key)) {
-            return null;
-        }
-        return SESSION_POOL.get(key);
+        return StringUtils.isNullOrEmpty(key) ? null : SESSION_POOL.get(key);
     }
 
     /**
      * 返回房间号，有值则表示已进入房间
-     *
-     * @return 返回房间号
      */
     public static String checkRoom(String username) {
         if (StringUtils.isNullOrEmpty(username)) {
             return null;
         }
-        for (PkRoom room : rooms) {
-            if (username.equals(room.getSessionAUsername()) || username.equals(room.getSessionBUsername())) {
-                return room.getRoomNo();
-            }
-        }
-        return null;
+        PkRoom room = roomMap.values().stream()
+                .filter(r -> username.equals(r.getSessionAUsername()) || username.equals(r.getSessionBUsername()))
+                .findFirst()
+                .orElse(null);
+        return room != null ? room.getRoomNo() : null;
     }
 
     /**
      * 进入房间，找到一个剩余一个位置的的房间，没有则新建一个房间
-     *
-     * @param username
-     * @return
      */
     public static synchronized PkRoom setInRoom(String username, String avatar) {
-        for (PkRoom room : rooms) {
-            if (room.checkEmpty()) {
-                // 房间不为空，并且处于等待状态
-                if (ClientStatus.WAIT.equals(room.getStatus())) {
-                    if (StringUtils.isNullOrEmpty(room.getSessionAUsername())) {
-                        room.setSessionAUsername(username);
-                        room.setSessionAAvatar(avatar);
-                        room.setUserNum(room.getUserNum() + 1);
-                    } else if (StringUtils.isNullOrEmpty(room.getSessionBUsername())) {
-                        room.setSessionBUsername(username);
-                        room.setSessionBAvatar(avatar);
-                        room.setUserNum(room.getUserNum() + 1);
-                    } else {
-                        break;
-                    }
-                    if (room.getUserNum() == 2) {
-                        room.setStatus(ClientStatus.READY);
-                    }
-                    return room;
+        for (PkRoom room : roomMap.values()) {
+            if (room.checkEmpty() && ClientStatus.WAIT.equals(room.getStatus())) {
+                if (StringUtils.isNullOrEmpty(room.getSessionAUsername())) {
+                    room.setSessionAUsername(username);
+                    room.setSessionAAvatar(avatar);
+                } else if (StringUtils.isNullOrEmpty(room.getSessionBUsername())) {
+                    room.setSessionBUsername(username);
+                    room.setSessionBAvatar(avatar);
                 }
+                room.setUserNum(room.getUserNum() + 1);
+                if (room.getUserNum() == 2) {
+                    room.setStatus(ClientStatus.READY);
+                }
+                return room;
             }
         }
         // 新建一个房间
         String roomNo = UUID.randomUUID().toString();
-        PkRoom pkRoom = new PkRoom().setRoomNo(roomNo)
+        PkRoom pkRoom = new PkRoom()
+                .setRoomNo(roomNo)
                 .setSessionAUsername(username)
                 .setSessionAAvatar(avatar)
-                .setStatus(ClientStatus.WAIT).setUserNum(1);
-        rooms.add(pkRoom);
+                .setStatus(ClientStatus.WAIT)
+                .setUserNum(1);
+        roomMap.put(roomNo, pkRoom);
         return pkRoom;
     }
 
 
     /**
      * 获取房间信息
-     *
-     * @param roomNo
-     * @return
      */
     public static PkRoom getRoom(String roomNo) {
-        for (PkRoom room : rooms) {
-            if (roomNo.equals(room.getRoomNo())) {
-                return room;
-            }
-        }
-        return null;
+        return roomMap.get(roomNo);
     }
 
     /**
      * 离开房间
-     *
-     * @param username
      */
     public static void leaveRoom(String username) {
-        if (StringUtils.isNullOrEmpty(username)) {
-            return;
+        if (!StringUtils.isNullOrEmpty(username)) {
+            removeUserFromRoom(username);
         }
-        for (PkRoom room : rooms) {
+    }
+
+    private static void removeUserFromRoom(String username) {
+        for (PkRoom room : roomMap.values()) {
             if (username.equals(room.getSessionAUsername())) {
                 room.setSessionAUsername(null);
                 room.setSessionAAvatar(null);
@@ -201,5 +154,4 @@ public class WebSessionManager {
             }
         }
     }
-
 }

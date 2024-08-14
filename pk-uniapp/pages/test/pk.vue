@@ -68,7 +68,7 @@
                 <u-icon @click="maskShow=false" name="close-circle-fill" color="#ccc" size="58"></u-icon>
               </view>
               <view class="closeImg">
-                <image mode="aspectFit" src="http://cdn.zhoukaiwen.com/answerTrophy.png"></image>
+                <image mode="aspectFit" src="/static/svg/trophy.svg"></image>
               </view>
               <view class="text-black text-bold text-center">恭喜您！完成答题！</view>
             </view>
@@ -220,10 +220,10 @@ export default {
       }
     },
     currentScoreBar() {
-      return `width: ${this.currentScore / 5 * 100}%;`
+      return `width: ${this.currentScore / this.questionArr.length * 100}%;`
     },
     oppositeScoreBar() {
-      return `width: ${this.oppositeScore / 5 * 100}%;`
+      return `width: ${this.oppositeScore / this.questionArr.length * 100}%;`
     },
     isWinner() {
       return this.currentScore >= this.oppositeScore ? 'WINNER' : 'FAILURE'

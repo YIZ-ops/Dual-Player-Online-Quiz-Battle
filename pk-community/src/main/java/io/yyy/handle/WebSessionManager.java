@@ -60,7 +60,7 @@ public class WebSessionManager {
         for (Map.Entry<String, WebSocketSession> entry : SESSION_POOL.entrySet()) {
             if (entry.getValue() == session) {
                 username = entry.getKey();
-                SESSION_POOL.remove(username);
+                removeAndClose(username);
                 break;
             }
         }

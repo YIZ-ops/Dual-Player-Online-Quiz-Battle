@@ -190,6 +190,15 @@ export default {
     }, 300)
   },
   onUnload() {
+    // 通知服务器本方已完成答题 防止用户提前退出导致对方获取不到
+    this.socket.sendMessage(
+        JSON.stringify({
+          type: 'self_finished',
+          username: this.selfClient.username,
+          data: this.currentScore,
+          roomNo: this.selfClient.roomId,
+        }),
+    )
     if (this.timer) {
       clearInterval(this.timer)
     }

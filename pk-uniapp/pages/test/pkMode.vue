@@ -1,7 +1,7 @@
 <template>
   <view class="page">
-    <button class="match-btn match-btn1 background-1" @click="findMatch">匹配对手</button>
-    <view class="matching-modal" v-if="matching">
+    <button class="match-btn" @click="findMatch">匹配对手</button>
+    <view v-if="matching">
       <view class="gooey">
         <view class="dot"></view>
         <view class="dots">
@@ -11,7 +11,7 @@
         </view>
       </view>
       <view class="matching-text">matching...</view>
-      <button @click="cancelMatch" class="match-btn cancel-btn background-2">取消匹配</button>
+      <button @click="cancelMatch" class="cancel-btn">取消匹配</button>
     </view>
 
     <view class="vs-modal" v-if="showVSModal">
@@ -77,7 +77,7 @@ export default {
     }, 800)
   },
   onUnload() {
-    this.matching = false
+    this.cancelMatch()
   },
   methods: {
     // 匹配对手
@@ -160,6 +160,7 @@ export default {
     // 取消匹配
     cancelMatch() {
       this.matching = false
+      clearTimeout(this.matchTimer)
       this.leaveRoom()
     },
     // 离开房间
@@ -175,12 +176,46 @@ export default {
 }
 </script>
 <style lang="scss">
+.match-btn, .cancel-btn {
+  width: 300rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 20rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  transition: all 0.3s;
+  border: none;
+  outline: none;
+}
+
+.match-btn {
+  background-color: #1E90FF;
+  color: #fff;
+  box-shadow: 0 10rpx 20rpx rgba(30, 144, 255, 0.3);
+
+  &:hover {
+    background-color: #4169E1;
+    box-shadow: 0 15rpx 25rpx rgba(30, 144, 255, 0.4);
+  }
+}
+
+.cancel-btn {
+  background-color: #FF4500;
+  color: #fff;
+  box-shadow: 0 10rpx 20rpx rgba(255, 69, 0, 0.3);
+
+  &:hover {
+    background-color: #FF6347;
+    box-shadow: 0 15rpx 25rpx rgba(255, 69, 0, 0.4);
+  }
+}
+
 .matching-text {
   position: absolute;
   display: inline-block;
   width: 100%;
   height: 30px;
-  left: 0%;
+  left: 0;
   top: 55%;
   text-align: center;
   color: #222;

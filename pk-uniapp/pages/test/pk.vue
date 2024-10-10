@@ -190,18 +190,8 @@ export default {
     }, 300)
   },
   onUnload() {
-    // 通知服务器本方已完成答题 防止用户提前退出导致对方获取不到
-    this.socket.sendMessage(
-        JSON.stringify({
-          type: 'self_finished',
-          username: this.selfClient.username,
-          data: this.currentScore,
-          roomNo: this.selfClient.roomId,
-        }),
-    )
-    if (this.timer) {
-      clearInterval(this.timer)
-    }
+    this.clearTimer() // 清除计时器
+    this.notifyFinish() // 通知服务器
     this.initParams()
     this.currentQ = 0
     this.currentScore = 0
@@ -237,6 +227,9 @@ export default {
     isWinner() {
       return this.currentScore >= this.oppositeScore ? 'WINNER' : 'FAILURE'
     },
+    currentProgress() {
+      return (100 / this.questionArr.length) * (this.currentQ + 1)
+    },
   },
   methods: {
     initParams() {
@@ -252,34 +245,38 @@ export default {
     },
     // 开启倒计时
     runStart() {
+      this.clearTimer() // 清除之前的计时器
       this.timer = setInterval(() => {
-        this.timerSec--
-        if (this.timerSec <= 0) {
-          this.runEnd()
-          if (this.timer) {
-            clearInterval(this.timer)
-          }
+        console.log('Timer tick:', this.timerSec)
+        if (this.timerSec > 0) {
+          this.timerSec--
+        } else {
+          console.log('Timer reached 0, ending round')
+          this.runEnd() // 倒计时结束
+          this.clearTimer() // 清除计时器
         }
       }, 1000)
     },
     // 计时结束
     runEnd() {
-      // 计时结束未作答
+// 计时结束未作答
       if (this.currentA === -1) {
         this.currentA = Number(this.questionArr[this.currentQ].answer) // 避免最后一题未作答时重复显示未作答
-        this.rightOptionActive = Number(this.questionArr[this.currentQ].answer)
+        this.rightOptionActive = this.currentA
         uni.showToast({
           title: '很遗憾未作答',
           icon: 'none',
         })
       }
       // 计时结束是最后一题
-      if (this.currentQ === (this.questionArr.length - 1)) {
+      if (this.currentQ === this.questionArr.length - 1) {
         this.handleLastQuestion()
-        return
+      } else {
+        setTimeout(() => {
+          this.currentQ++
+          this.initRoundModal() // 初始化下一题
+        }, 300)
       }
-      this.currentQ++
-      this.initRoundModal()
     },
     getQuestions() {
       const answerOptions = ['A', 'B', 'C', 'D']
@@ -300,54 +297,41 @@ export default {
     // 确认答案
     confirmAnswer(index) {
       this.chooseOptionActive = index
-      this.progress = (100 / this.questionArr.length) * (this.currentQ + 1) // 进度条
-      if (this.progress < 100) {
-        this.currentA = index
-        const rightAnswer = Number(this.questionArr[this.currentQ].answer)
-        // 回答正确
-        if (this.currentA === rightAnswer) {
-          const score = this.questionArr[this.currentQ].score
-          this.currentScore += score
-          this.updateScore(score)
-        } else {
-          uni.showToast({
-            title: '答错了',
-            icon: 'none',
-          })
-          this.rightOptionActive = rightAnswer
-        }
-        setTimeout(() => {
-          this.animation = 'animation-slide-left'
-          this.initParams()
-          this.currentQ++ // 翻第二页
-          setTimeout(() => {
-            this.animation = ''
-          }, 800)
-        }, 300)
+      this.progress = this.currentProgress // 进度条
+      this.currentA = index
+      const rightAnswer = Number(this.questionArr[this.currentQ].answer)
+      // 回答正确
+      if (this.currentA === rightAnswer) {
+        const score = this.questionArr[this.currentQ].score
+        this.currentScore += score
+        this.updateScore(score) // 更新积分到服务器
       } else {
-        this.handleLastQuestion()
+        uni.showToast({
+          title: '答错了',
+          icon: 'none',
+        })
+        this.rightOptionActive = rightAnswer
+      }
+
+      if (this.currentQ === this.questionArr.length - 1) {
+        this.handleLastQuestion() // 最后一题
+      } else {
+        setTimeout(() => {
+          this.currentQ++
+          this.initRoundModal() // 初始化下一题
+        }, 300)
       }
     },
     // 最后一题
     handleLastQuestion() {
-      if (this.timer) {
-        clearInterval(this.timer)
-      }
+      this.clearTimer() // 清除倒计时
       this.selfFinished = true
       this.postRecord()  // 提交本方答题记录
-      // 通知服务器本方已完成答题
-      this.socket.sendMessage(
-          JSON.stringify({
-            type: 'self_finished',
-            username: this.selfClient.username,
-            data: this.currentScore,
-            roomNo: this.selfClient.roomId,
-          }),
-      )
+      this.notifyFinish() // 通知服务器自己已完成
       this.maskShow = true
       setTimeout(() => {
         this.maskShow = false
-      }, 3000)
+      }, 1000)
       if (this.opponentFinished) {
         // 对方已经完成，立即显示结果
         this.showResultPanel()
@@ -357,6 +341,15 @@ export default {
         })
       }
       this.hasData = false
+    },
+    // 通知服务器自己完成答题
+    notifyFinish() {
+      this.socket.sendMessage(JSON.stringify({
+        type: 'self_finished',
+        username: this.selfClient.username,
+        data: this.currentScore,
+        roomNo: this.selfClient.roomId,
+      }))
     },
     // 发送成绩
     updateScore(score) {
@@ -403,9 +396,9 @@ export default {
   justify-content: space-between;
   align-items: center;
   background-color: #fff;
-  border-radius: 20rpx;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  margin: 0 18px;
+  border-radius: 10rpx;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 20rpx 40rpx 20rpx 40rpx;
 }
 
 .score-board {
@@ -489,7 +482,6 @@ export default {
 
 .rect {
   width: 480rpx;
-  // height: 520rpx;
   border-radius: 20rpx;
   padding: 25rpx 25rpx 80rpx 25rpx;
   box-sizing: border-box;
@@ -516,6 +508,7 @@ export default {
 
 .mainBox {
   padding: 20rpx 40rpx 20rpx 40rpx;
+  border-radius: 10rpx;
 }
 
 .explainMain {
@@ -603,13 +596,6 @@ export default {
 .container {
   background-color: #f2f2f2;
 
-  .bannerBox {
-    width: 750rpx;
-
-    image {
-      width: 750rpx;
-    }
-  }
 
   .explain {
     width: 750rpx;
